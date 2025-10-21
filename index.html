@@ -694,9 +694,9 @@
                 const brandSide = keyCode === 69 ? 'left' : 'right';
                 
                 // Extract word prime text (only for Round 3)
-                let wordText = '';
-                let wordIndex = '';
-                
+                let wordText = 'None';
+                let wordIndex = 0;
+
                 if (currentRound === 3 && currentStimulus && currentStimulus.stimulus) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = currentStimulus.stimulus;
