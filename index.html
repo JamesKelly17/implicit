@@ -345,9 +345,13 @@
             <h2>Thank You!</h2>
             <p>You have completed the study.</p>
             <p>Your response data has been saved.</p>
+            
+            <div id="analysisPreview" style="margin: 30px 0; max-height: 400px; overflow-y: auto; text-align: left;"></div>
+            
             <div style="margin-top: 20px;">
-                <button class="button" onclick="downloadData('json')" style="margin-right: 10px;">Download JSON</button>
-                <button class="button" onclick="downloadData('csv')">Download CSV</button>
+                <button class="button" onclick="downloadData('json')" style="margin-right: 10px;">Download Raw Data (JSON)</button>
+                <button class="button" onclick="downloadData('csv')" style="margin-right: 10px;">Download Raw Data (CSV)</button>
+                <button class="button" onclick="downloadData('analysis')">Download Analysis (CSV)</button>
             </div>
         </div>
     </div>
@@ -498,76 +502,107 @@
             // Number of trials per round
             // Round 1: 6 trials (practice)
             // Round 2: 12 trials (main task)
-            // Round 3: 48 trials (priming - each word shown 4 times)
+            // Round 3: 48 trials (priming - each word paired with each brand 2 times)
             const numTrials = roundNum === 1 ? 6 : (roundNum === 2 ? 12 : 48);
-            
-            // Initialize empty arrays
-            for (let i = 0; i < numTrials; i++) {
-                stimuli.push({ stimulus: '', correct: '', index: '' });
-                stimuli2.push({ stimulus: '', correct: '', index: '' });
-            }
-            
-            // Build brand logo stimuli (50/50 split between Brand 1 and Brand 2)
-            const half = stimuli2.length / 2;
             
             // Determine correct key codes based on counterbalancing
             const brand1KeyCode = leftBrand === brand1Name ? 69 : 73;  // 69 = E key, 73 = I key
             const brand2KeyCode = leftBrand === brand2Name ? 69 : 73;
             
-            // Brand 1 logos
-            for (let i = 0; i < half; i++) {
-                const img = new Image();
-                img.src = brandImages.brand1;
-                img.className = 'stimulus-image';
-                stimuli2[i] = { 
-                    stimulus: img, 
-                    correct: brand1KeyCode, 
-                    index: 15 + i, 
-                    brand: brand1Name 
-                };
-            }
-            
-            // Brand 2 logos
-            for (let i = half; i < stimuli2.length; i++) {
-                const img = new Image();
-                img.src = brandImages.brand2;
-                img.className = 'stimulus-image';
-                stimuli2[i] = { 
-                    stimulus: img, 
-                    correct: brand2KeyCode, 
-                    index: 20 + (i - half), 
-                    brand: brand2Name 
-                };
-            }
-            
-            // Add word primes only for Round 3
             if (roundNum === 3) {
-                // Each word appears equally (48 trials / 12 words = 4 times each)
-                const wordsPerStimulus = Math.floor(numTrials / wordStimuli.length);
-                const wordPool = [];
+                // Round 3: Create balanced word-brand pairs
+                // Each word appears with each brand exactly 2 times
+                const wordBrandPairs = [];
                 
-                // Build balanced word pool
                 for (let wordIdx = 0; wordIdx < wordStimuli.length; wordIdx++) {
-                    for (let repeat = 0; repeat < wordsPerStimulus; repeat++) {
-                        wordPool.push({
-                            stimulus: `<div class="stimulus-word">${wordStimuli[wordIdx]}</div>`,
-                            correct: 0,  // Words are primes, not response targets
-                            index: wordIdx + 1
+                    const word = wordStimuli[wordIdx];
+                    
+                    // 2 repetitions with Brand 1
+                    for (let rep = 0; rep < 2; rep++) {
+                        wordBrandPairs.push({
+                            word: word,
+                            wordIndex: wordIdx + 1,
+                            brand: brand1Name,
+                            brandKeyCode: brand1KeyCode,
+                            brandIndex: 15 + wordIdx * 2 + rep
+                        });
+                    }
+                    
+                    // 2 repetitions with Brand 2
+                    for (let rep = 0; rep < 2; rep++) {
+                        wordBrandPairs.push({
+                            word: word,
+                            wordIndex: wordIdx + 1,
+                            brand: brand2Name,
+                            brandKeyCode: brand2KeyCode,
+                            brandIndex: 20 + wordIdx * 2 + rep
                         });
                     }
                 }
                 
-                // Randomize word order
-                shuffle(wordPool);
+                // Randomize the pairs
+                shuffle(wordBrandPairs);
                 
-                // Assign to stimuli array
-                for (let i = 0; i < stimuli.length; i++) {
-                    stimuli[i] = wordPool[i];
+                // Build stimuli arrays from shuffled pairs
+                wordBrandPairs.forEach(pair => {
+                    // Word stimulus
+                    stimuli.push({
+                        stimulus: `<div class="stimulus-word">${pair.word}</div>`,
+                        correct: 0,
+                        index: pair.wordIndex
+                    });
+                    
+                    // Brand stimulus
+                    const img = new Image();
+                    img.src = pair.brand === brand1Name ? brandImages.brand1 : brandImages.brand2;
+                    img.className = 'stimulus-image';
+                    stimuli2.push({
+                        stimulus: img,
+                        correct: pair.brandKeyCode,
+                        index: pair.brandIndex,
+                        brand: pair.brand
+                    });
+                });
+            } else {
+                // Rounds 1 & 2: Original random approach
+                // Initialize empty arrays
+                for (let i = 0; i < numTrials; i++) {
+                    stimuli.push({ stimulus: '', correct: '', index: '' });
+                    stimuli2.push({ stimulus: '', correct: '', index: '' });
                 }
+                
+                // Build brand logo stimuli (50/50 split between Brand 1 and Brand 2)
+                const half = stimuli2.length / 2;
+                
+                // Brand 1 logos
+                for (let i = 0; i < half; i++) {
+                    const img = new Image();
+                    img.src = brandImages.brand1;
+                    img.className = 'stimulus-image';
+                    stimuli2[i] = { 
+                        stimulus: img, 
+                        correct: brand1KeyCode, 
+                        index: 15 + i, 
+                        brand: brand1Name 
+                    };
+                }
+                
+                // Brand 2 logos
+                for (let i = half; i < stimuli2.length; i++) {
+                    const img = new Image();
+                    img.src = brandImages.brand2;
+                    img.className = 'stimulus-image';
+                    stimuli2[i] = { 
+                        stimulus: img, 
+                        correct: brand2KeyCode, 
+                        index: 20 + (i - half), 
+                        brand: brand2Name 
+                    };
+                }
+                
+                // Randomize brand logo order
+                shuffle(stimuli2);
             }
-            
-            // Randomize brand logo order
-            shuffle(stimuli2);
         }
 
         /**
@@ -696,7 +731,7 @@
                 // Extract word prime text (only for Round 3)
                 let wordText = 'None';
                 let wordIndex = 0;
-
+                
                 if (currentRound === 3 && currentStimulus && currentStimulus.stimulus) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = currentStimulus.stimulus;
@@ -774,17 +809,311 @@
             
             // Save to browser storage as backup
             localStorage.setItem('iat_responses', JSON.stringify(allResponses));
+            
+            // Calculate analysis
+            calculatePrimingAnalysis();
+        }
+        
+        /**
+         * Calculate priming effect analysis
+         * Compares Round 3 (with primes) to Round 2 (baseline)
+         */
+        let primingAnalysis = [];
+        
+        function calculatePrimingAnalysis() {
+            // Filter out outliers (top 98.5 percentile and bottom 1.5 percentile, |z-score| > 2.167) from rounds 2 and 3
+            const filterOutliers = (data) => {
+                if (data.length === 0) return data;
+                
+                // Calculate mean and standard deviation
+                const reactionTimes = data.map(r => r.reactionTime);
+                const mean = reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length;
+                const variance = reactionTimes.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / reactionTimes.length;
+                const stdDev = Math.sqrt(variance);
+                
+                // Filter out responses with |z-score| > 2.167 (both extremes)
+                return data.filter(r => {
+                    const zScore = (r.reactionTime - mean) / stdDev;
+                    return zScore >= -2.167 && zScore <= 2.167;
+                });
+            };
+            
+            // Get Round 2 data (correct only) and filter outliers
+            let round2Data = allResponses.filter(r => r.round === 2 && r.correct === 'C');
+            round2Data = filterOutliers(round2Data);
+            
+            const round2ByBrand = {};
+            
+            round2Data.forEach(r => {
+                if (!round2ByBrand[r.brandName]) {
+                    round2ByBrand[r.brandName] = [];
+                }
+                round2ByBrand[r.brandName].push(r.reactionTime);
+            });
+            
+            const round2Averages = {};
+            for (const brand in round2ByBrand) {
+                const times = round2ByBrand[brand];
+                round2Averages[brand] = times.reduce((a, b) => a + b, 0) / times.length;
+            }
+            
+            // Get Round 3 data (all responses) and filter outliers
+            let round3Data = allResponses.filter(r => r.round === 3);
+            round3Data = filterOutliers(round3Data);
+            
+            const round3ByBrandWord = {};
+            
+            round3Data.forEach(r => {
+                const key = `${r.brandName}|${r.wordText}`;
+                if (!round3ByBrandWord[key]) {
+                    round3ByBrandWord[key] = [];
+                }
+                round3ByBrandWord[key].push(r.reactionTime);
+            });
+            
+            // Calculate differences
+            primingAnalysis = [];
+            const allDifferences = [];
+            
+            for (const key in round3ByBrandWord) {
+                const [brand, word] = key.split('|');
+                const times = round3ByBrandWord[key];
+                const round3Avg = times.reduce((a, b) => a + b, 0) / times.length;
+                const round2Avg = round2Averages[brand] || 0;
+                const difference = round3Avg - round2Avg;
+                
+                primingAnalysis.push({
+                    brandName: brand,
+                    wordText: word,
+                    round3_avgRT: Math.round(round3Avg),
+                    round2_avgRT: Math.round(round2Avg),
+                    difference: Math.round(difference),
+                    trialCount: times.length
+                });
+                
+                allDifferences.push(difference);
+            }
+            
+            // Calculate mean and standard deviation for standardization
+            const mean = allDifferences.reduce((a, b) => a + b, 0) / allDifferences.length;
+            const variance = allDifferences.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / allDifferences.length;
+            const stdDev = Math.sqrt(variance);
+            
+            // Add standardized score (z-score * -1)
+            primingAnalysis.forEach(item => {
+                const zScore = (item.difference - mean) / stdDev;
+                item.score = parseFloat((zScore * -1).toFixed(3));
+            });
+            
+            // Calculate average score per word for sorting
+            const wordScores = {};
+            primingAnalysis.forEach(item => {
+                if (!wordScores[item.wordText]) {
+                    wordScores[item.wordText] = [];
+                }
+                wordScores[item.wordText].push(item.score);
+            });
+            
+            const wordAvgScores = {};
+            for (const word in wordScores) {
+                wordAvgScores[word] = wordScores[word].reduce((a, b) => a + b, 0) / wordScores[word].length;
+            }
+            
+            // Sort by average score (largest to smallest), then by brand
+            primingAnalysis.sort((a, b) => {
+                const avgA = wordAvgScores[a.wordText];
+                const avgB = wordAvgScores[b.wordText];
+                if (avgA !== avgB) {
+                    return avgB - avgA; // Descending order
+                }
+                return a.brandName.localeCompare(b.brandName);
+            });
+            
+            // Display preview
+            displayAnalysisPreview();
+        }
+        
+        /**
+         * Display analysis preview on completion screen
+         */
+        function displayAnalysisPreview() {
+            const previewEl = document.getElementById('analysisPreview');
+            
+            let html = '<div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">';
+            html += '<strong style="color: #856404;">⚠️ Disclaimer:</strong> ';
+            html += '<span style="color: #856404;">These scores are for demonstration purposes only. Results cannot be reported on an individual level. A sample size of n≥120 is required for significant findings.</span>';
+            html += '</div>';
+            
+            html += '<h3 style="color: #333; margin-bottom: 15px;">Priming Based Implicit Analysis</h3>';
+            html += '<p style="font-size: 14px; margin-bottom: 15px;">Standardized scores showing brand-word associations. Higher scores indicate stronger associations (faster responses).</p>';
+            
+            // Create chart first
+            html += createScoreChart();
+            
+            // Sort data by score for table display (largest to smallest)
+            const tableSortedData = [...primingAnalysis].sort((a, b) => b.score - a.score);
+            
+            // Table below chart
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 30px;">';
+            html += '<thead><tr style="background: #f0f0f0; border-bottom: 2px solid #ddd;">';
+            html += '<th style="padding: 8px; text-align: left;">Brand</th>';
+            html += '<th style="padding: 8px; text-align: left;">Brand Associations</th>';
+            html += '<th style="padding: 8px; text-align: right;">Round 3 RT</th>';
+            html += '<th style="padding: 8px; text-align: right;">Round 2 RT</th>';
+            html += '<th style="padding: 8px; text-align: right;">Difference</th>';
+            html += '<th style="padding: 8px; text-align: right;">Score</th>';
+            html += '</tr></thead><tbody>';
+            
+            tableSortedData.forEach(row => {
+                const scoreColor = row.score > 0 ? '#27ae60' : '#e74c3c';
+                html += '<tr style="border-bottom: 1px solid #eee;">';
+                html += `<td style="padding: 8px;">${row.brandName}</td>`;
+                html += `<td style="padding: 8px;"><strong>${row.wordText}</strong></td>`;
+                html += `<td style="padding: 8px; text-align: right;">${row.round3_avgRT}ms</td>`;
+                html += `<td style="padding: 8px; text-align: right;">${row.round2_avgRT}ms</td>`;
+                html += `<td style="padding: 8px; text-align: right;">${row.difference > 0 ? '+' : ''}${row.difference}ms</td>`;
+                html += `<td style="padding: 8px; text-align: right; color: ${scoreColor}; font-weight: bold;">${row.score}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            
+            previewEl.innerHTML = html;
+        }
+        
+        /**
+         * Create clustered bar chart of scores
+         */
+        function createScoreChart() {
+            // Organize data by word
+            const wordData = {};
+            primingAnalysis.forEach(item => {
+                if (!wordData[item.wordText]) {
+                    wordData[item.wordText] = {};
+                }
+                wordData[item.wordText][item.brandName] = item.score;
+            });
+            
+            // Get unique words sorted by average score
+            const words = Object.keys(wordData);
+            const wordAvgScores = words.map(word => {
+                const scores = Object.values(wordData[word]);
+                return scores.reduce((a, b) => a + b, 0) / scores.length;
+            });
+            
+            // Sort words by average score (descending)
+            const sortedIndices = wordAvgScores
+                .map((score, idx) => ({ score, idx }))
+                .sort((a, b) => b.score - a.score)
+                .map(item => item.idx);
+            
+            const sortedWords = sortedIndices.map(idx => words[idx]);
+            
+            // Get brand names
+            const brands = [...new Set(primingAnalysis.map(item => item.brandName))].sort();
+            
+            // Chart dimensions
+            const chartWidth = 700;
+            const chartHeight = 400;
+            const margin = { top: 20, right: 120, bottom: 80, left: 60 };
+            const plotWidth = chartWidth - margin.left - margin.right;
+            const plotHeight = chartHeight - margin.top - margin.bottom;
+            
+            // Calculate scales
+            const allScores = primingAnalysis.map(item => item.score);
+            const minScore = Math.min(...allScores, 0);
+            const maxScore = Math.max(...allScores, 0);
+            const scoreRange = maxScore - minScore;
+            
+            // Bar dimensions
+            const groupWidth = plotWidth / sortedWords.length;
+            const barWidth = (groupWidth * 0.8) / brands.length;
+            const barSpacing = groupWidth * 0.1;
+            
+            // Brand colors
+            const brandColors = {
+                'Apple Music': '#FA243C',
+                'Spotify': '#1DB954'
+            };
+            
+            let svg = '<div style="margin-top: 20px;">';
+            svg += '<h4 style="color: #333; margin-bottom: 10px;">Brand Association Scores</h4>';
+            svg += `<svg width="${chartWidth}" height="${chartHeight}" style="border: 1px solid #ddd; background: white;">`;
+            
+            // Y-axis
+            const yScale = (score) => margin.top + plotHeight - ((score - minScore) / scoreRange) * plotHeight;
+            
+            // Draw horizontal grid lines
+            for (let i = 0; i <= 5; i++) {
+                const score = minScore + (scoreRange * i / 5);
+                const y = yScale(score);
+                svg += `<line x1="${margin.left}" y1="${y}" x2="${chartWidth - margin.right}" y2="${y}" stroke="#e0e0e0" stroke-width="1"/>`;
+                svg += `<text x="${margin.left - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#666">${score.toFixed(1)}</text>`;
+            }
+            
+            // Draw zero line
+            if (minScore < 0 && maxScore > 0) {
+                const zeroY = yScale(0);
+                svg += `<line x1="${margin.left}" y1="${zeroY}" x2="${chartWidth - margin.right}" y2="${zeroY}" stroke="#333" stroke-width="2"/>`;
+            }
+            
+            // Draw bars
+            sortedWords.forEach((word, wordIdx) => {
+                const groupX = margin.left + wordIdx * groupWidth + barSpacing;
+                
+                brands.forEach((brand, brandIdx) => {
+                    const score = wordData[word][brand] || 0;
+                    const barHeight = Math.abs((score - 0) / scoreRange) * plotHeight;
+                    const barX = groupX + brandIdx * barWidth;
+                    const barY = score >= 0 ? yScale(score) : yScale(0);
+                    
+                    const color = brandColors[brand] || '#888';
+                    
+                    svg += `<rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.8"/>`;
+                    
+                    // Add score label on top of bar
+                    const labelY = score >= 0 ? barY - 5 : barY + barHeight + 12;
+                    svg += `<text x="${barX + barWidth/2}" y="${labelY}" text-anchor="middle" font-size="10" fill="#333">${score.toFixed(2)}</text>`;
+                });
+                
+                // X-axis label (word)
+                const labelX = groupX + (barWidth * brands.length) / 2;
+                svg += `<text x="${labelX}" y="${chartHeight - margin.bottom + 20}" text-anchor="end" font-size="11" fill="#333" transform="rotate(-45 ${labelX} ${chartHeight - margin.bottom + 20})">${word}</text>`;
+            });
+            
+            // Axis labels
+            svg += `<text x="${chartWidth/2}" y="${chartHeight - 10}" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Brand Associations</text>`;
+            svg += `<text x="${20}" y="${chartHeight/2}" text-anchor="middle" font-size="14" font-weight="bold" fill="#333" transform="rotate(-90 20 ${chartHeight/2})">Association Score</text>`;
+            
+            // Legend
+            let legendY = margin.top + 20;
+            brands.forEach((brand, idx) => {
+                const legendX = chartWidth - margin.right + 20;
+                const y = legendY + idx * 25;
+                const color = brandColors[brand] || '#888';
+                
+                svg += `<rect x="${legendX}" y="${y - 10}" width="15" height="15" fill="${color}" opacity="0.8"/>`;
+                svg += `<text x="${legendX + 20}" y="${y}" font-size="12" fill="#333">${brand}</text>`;
+            });
+            
+            svg += '</svg></div>';
+            
+            return svg;
         }
 
         /**
          * Download collected data as JSON or CSV
-         * @param {string} format - 'json' or 'csv'
+         * @param {string} format - 'json', 'csv', or 'analysis'
          */
         function downloadData(format = 'json') {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             let dataStr, dataBlob, filename;
             
-            if (format === 'csv') {
+            if (format === 'analysis') {
+                dataStr = convertToCSV(primingAnalysis);
+                dataBlob = new Blob([dataStr], { type: 'text/csv' });
+                filename = `priming_analysis_${timestamp}.csv`;
+            } else if (format === 'csv') {
                 dataStr = convertToCSV(allResponses);
                 dataBlob = new Blob([dataStr], { type: 'text/csv' });
                 filename = `survey_results_${timestamp}.csv`;
