@@ -293,6 +293,7 @@
                 When it matches the top right brand, press the <strong>Right</strong> button as fast as you can.
             </p>
             <p>If you make an error, a red <strong style="color:red">X</strong> will appear. Correct errors by hitting the other key/button.</p>
+            <br>
             <p>Please try to go <strong><em>as fast as you can</em></strong> while making as few errors as possible. 
             If you are going too slow, a <span style="color: red">"Too Slow"</span> message will appear.</p>
             <button class="button" onclick="showRoundInstructions()">Continue</button>
@@ -363,6 +364,14 @@
         
         // Detect if user is on mobile device
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Set up initial instructions based on device type
+        window.addEventListener('DOMContentLoaded', function() {
+            if (isMobile) {
+                document.getElementById('keyInstructions').classList.add('hidden');
+                document.getElementById('buttonInstructions').classList.remove('hidden');
+            }
+        });
         
         // Brand names - CUSTOMIZE THESE for your study
         const brand1Name = 'Apple Music';
