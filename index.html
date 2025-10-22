@@ -400,8 +400,8 @@
         // Word stimuli - only shown in Round 3 as semantic primes
         // CUSTOMIZE THESE for your study
         const wordStimuli = [
-            'Love', 'For Me', 'Personal', 'Inspired', 'Fun', 'Excitement', 
-            'Playful', 'Authentic', 'Comfort', 'Culture', 'Bold', 'Compassionate'
+            'Love', 'For Me', 'Personal', 'Inspired', 'Fun', 
+            'Playful', 'Authentic', 'Comfort', 'Culture', 'Bold'
         ];
 
         // Brand logo image URLs
@@ -511,8 +511,8 @@
             // Number of trials per round
             // Round 1: 6 trials (practice)
             // Round 2: 12 trials (main task)
-            // Round 3: 48 trials (priming - each word paired with each brand 2 times)
-            const numTrials = roundNum === 1 ? 6 : (roundNum === 2 ? 12 : 48);
+            // Round 3: 40 trials (priming - each word paired with each brand 2 times)
+            const numTrials = roundNum === 1 ? 6 : (roundNum === 2 ? 12 : 40);
             
             // Determine correct key codes based on counterbalancing
             const brand1KeyCode = leftBrand === brand1Name ? 69 : 73;  // 69 = E key, 73 = I key
@@ -991,53 +991,26 @@
         }
         
         /**
-         * Create clustered bar chart of scores
+         * Create two separate bar charts of scores, one for each brand
          */
         function createScoreChart() {
-            // Organize data by word
-            const wordData = {};
+            // Organize data by brand
+            const brandData = {};
             primingAnalysis.forEach(item => {
-                if (!wordData[item.wordText]) {
-                    wordData[item.wordText] = {};
+                if (!brandData[item.brandName]) {
+                    brandData[item.brandName] = [];
                 }
-                wordData[item.wordText][item.brandName] = item.score;
+                brandData[item.brandName].push({
+                    word: item.wordText,
+                    score: item.score
+                });
             });
             
-            // Get unique words sorted by average score
-            const words = Object.keys(wordData);
-            const wordAvgScores = words.map(word => {
-                const scores = Object.values(wordData[word]);
-                return scores.reduce((a, b) => a + b, 0) / scores.length;
+            // Sort each brand's data by score (descending)
+            const brands = Object.keys(brandData).sort();
+            brands.forEach(brand => {
+                brandData[brand].sort((a, b) => b.score - a.score);
             });
-            
-            // Sort words by average score (descending)
-            const sortedIndices = wordAvgScores
-                .map((score, idx) => ({ score, idx }))
-                .sort((a, b) => b.score - a.score)
-                .map(item => item.idx);
-            
-            const sortedWords = sortedIndices.map(idx => words[idx]);
-            
-            // Get brand names
-            const brands = [...new Set(primingAnalysis.map(item => item.brandName))].sort();
-            
-            // Chart dimensions
-            const chartWidth = 700;
-            const chartHeight = 400;
-            const margin = { top: 20, right: 120, bottom: 80, left: 60 };
-            const plotWidth = chartWidth - margin.left - margin.right;
-            const plotHeight = chartHeight - margin.top - margin.bottom;
-            
-            // Calculate scales
-            const allScores = primingAnalysis.map(item => item.score);
-            const minScore = Math.min(...allScores, 0);
-            const maxScore = Math.max(...allScores, 0);
-            const scoreRange = maxScore - minScore;
-            
-            // Bar dimensions
-            const groupWidth = plotWidth / sortedWords.length;
-            const barWidth = (groupWidth * 0.8) / brands.length;
-            const barSpacing = groupWidth * 0.1;
             
             // Brand colors
             const brandColors = {
@@ -1045,69 +1018,78 @@
                 'Spotify': '#1DB954'
             };
             
-            let svg = '<div style="margin-top: 20px;">';
-            svg += '<h4 style="color: #333; margin-bottom: 10px;">Brand Association Scores</h4>';
-            svg += `<svg width="${chartWidth}" height="${chartHeight}" style="border: 1px solid #ddd; background: white;">`;
+            // Calculate GLOBAL scale across all brands for comparison
+            const allScores = primingAnalysis.map(item => item.score);
+            const globalMinScore = Math.min(...allScores, 0);
+            const globalMaxScore = Math.max(...allScores, 0);
+            const globalScoreRange = globalMaxScore - globalMinScore;
             
-            // Y-axis
-            const yScale = (score) => margin.top + plotHeight - ((score - minScore) / scoreRange) * plotHeight;
+            // Chart dimensions
+            const chartWidth = 350;
+            const chartHeight = 450;
+            const margin = { top: 40, right: 20, bottom: 120, left: 60 };
+            const plotWidth = chartWidth - margin.left - margin.right;
+            const plotHeight = chartHeight - margin.top - margin.bottom;
             
-            // Draw horizontal grid lines
-            for (let i = 0; i <= 5; i++) {
-                const score = minScore + (scoreRange * i / 5);
-                const y = yScale(score);
-                svg += `<line x1="${margin.left}" y1="${y}" x2="${chartWidth - margin.right}" y2="${y}" stroke="#e0e0e0" stroke-width="1"/>`;
-                svg += `<text x="${margin.left - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#666">${score.toFixed(1)}</text>`;
-            }
+            let html = '<div style="margin-top: 20px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">';
             
-            // Draw zero line
-            if (minScore < 0 && maxScore > 0) {
-                const zeroY = yScale(0);
-                svg += `<line x1="${margin.left}" y1="${zeroY}" x2="${chartWidth - margin.right}" y2="${zeroY}" stroke="#333" stroke-width="2"/>`;
-            }
-            
-            // Draw bars
-            sortedWords.forEach((word, wordIdx) => {
-                const groupX = margin.left + wordIdx * groupWidth + barSpacing;
+            // Create a chart for each brand
+            brands.forEach(brand => {
+                const data = brandData[brand];
+                const color = brandColors[brand] || '#888';
                 
-                brands.forEach((brand, brandIdx) => {
-                    const score = wordData[word][brand] || 0;
-                    const barHeight = Math.abs((score - 0) / scoreRange) * plotHeight;
-                    const barX = groupX + brandIdx * barWidth;
+                // Bar dimensions
+                const barWidth = plotWidth / data.length * 0.8;
+                const barSpacing = plotWidth / data.length * 0.1;
+                
+                html += '<div style="text-align: center;">';
+                html += `<h4 style="color: ${color}; margin-bottom: 10px; font-size: 16px;">${brand}</h4>`;
+                html += `<svg width="${chartWidth}" height="${chartHeight}" style="border: 1px solid #ddd; background: white;">`;
+                
+                // Y-axis scale function using GLOBAL range
+                const yScale = (score) => margin.top + plotHeight - ((score - globalMinScore) / globalScoreRange) * plotHeight;
+                
+                // Draw horizontal grid lines
+                for (let i = 0; i <= 5; i++) {
+                    const score = globalMinScore + (globalScoreRange * i / 5);
+                    const y = yScale(score);
+                    html += `<line x1="${margin.left}" y1="${y}" x2="${chartWidth - margin.right}" y2="${y}" stroke="#e0e0e0" stroke-width="1"/>`;
+                    html += `<text x="${margin.left - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#666">${score.toFixed(1)}</text>`;
+                }
+                
+                // Draw zero line
+                if (globalMinScore < 0 && globalMaxScore > 0) {
+                    const zeroY = yScale(0);
+                    html += `<line x1="${margin.left}" y1="${zeroY}" x2="${chartWidth - margin.right}" y2="${zeroY}" stroke="#333" stroke-width="2"/>`;
+                }
+                
+                // Draw bars
+                data.forEach((item, idx) => {
+                    const barX = margin.left + idx * (barWidth + barSpacing * 2) + barSpacing;
+                    const score = item.score;
+                    const barHeight = Math.abs((score - 0) / globalScoreRange) * plotHeight;
                     const barY = score >= 0 ? yScale(score) : yScale(0);
                     
-                    const color = brandColors[brand] || '#888';
-                    
-                    svg += `<rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.8"/>`;
+                    html += `<rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.8"/>`;
                     
                     // Add score label on top of bar
                     const labelY = score >= 0 ? barY - 5 : barY + barHeight + 12;
-                    svg += `<text x="${barX + barWidth/2}" y="${labelY}" text-anchor="middle" font-size="10" fill="#333">${score.toFixed(2)}</text>`;
+                    html += `<text x="${barX + barWidth/2}" y="${labelY}" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">${score.toFixed(2)}</text>`;
+                    
+                    // X-axis label (word)
+                    const labelX = barX + barWidth/2;
+                    html += `<text x="${labelX}" y="${chartHeight - margin.bottom + 20}" text-anchor="end" font-size="11" fill="#333" transform="rotate(-45 ${labelX} ${chartHeight - margin.bottom + 20})">${item.word}</text>`;
                 });
                 
-                // X-axis label (word)
-                const labelX = groupX + (barWidth * brands.length) / 2;
-                svg += `<text x="${labelX}" y="${chartHeight - margin.bottom + 20}" text-anchor="end" font-size="11" fill="#333" transform="rotate(-45 ${labelX} ${chartHeight - margin.bottom + 20})">${word}</text>`;
-            });
-            
-            // Axis labels
-            svg += `<text x="${chartWidth/2}" y="${chartHeight - 10}" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Brand Associations</text>`;
-            svg += `<text x="${20}" y="${chartHeight/2}" text-anchor="middle" font-size="14" font-weight="bold" fill="#333" transform="rotate(-90 20 ${chartHeight/2})">Association Score</text>`;
-            
-            // Legend
-            let legendY = margin.top + 20;
-            brands.forEach((brand, idx) => {
-                const legendX = chartWidth - margin.right + 20;
-                const y = legendY + idx * 25;
-                const color = brandColors[brand] || '#888';
+                // Y-axis label
+                html += `<text x="${20}" y="${chartHeight/2}" text-anchor="middle" font-size="13" font-weight="bold" fill="#333" transform="rotate(-90 20 ${chartHeight/2})">Score</text>`;
                 
-                svg += `<rect x="${legendX}" y="${y - 10}" width="15" height="15" fill="${color}" opacity="0.8"/>`;
-                svg += `<text x="${legendX + 20}" y="${y}" font-size="12" fill="#333">${brand}</text>`;
+                html += '</svg></div>';
             });
             
-            svg += '</svg></div>';
+            html += '</div>';
             
-            return svg;
+            return html;
         }
 
         /**
